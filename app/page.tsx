@@ -5,23 +5,42 @@ export default function Home() {
   const [text, setText] = useState("");
   const [score, setScore] = useState<number | null>(null);
   const [reason, setReason] = useState("");
+  const [highlights, setHighlights] = useState<string[]>([]);
   const [humanized, setHumanized] = useState("");
   const [detecting, setDetecting] = useState(false);
   const [humanizing, setHumanizing] = useState(false);
+  const [error, setError] = useState("");
+  
+  const FREE_LIMIT = 2000;
+  const charCount = text.length;
+  const isOverLimit = charCount > FREE_LIMIT;
 
   async function detect() {
     if (!text.trim()) return;
+    if (isOverLimit) {
+      setError(`文本超出限制！免费版最多 ${FREE_LIMIT} 字，当前 ${charCount} 字`);
+      return;
+    }
     setDetecting(true);
     setScore(null);
     setReason("");
+    setHighlights([]);
+    setError("");
+    
     const res = await fetch("/api/detect", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
     });
     const data = await res.json();
-    setScore(data.score);
-    setReason(data.reason);
+    
+    if (data.error) {
+      setError(data.error);
+    } else {
+      setScore(data.score);
+      setReason(data.reason);
+      setHighlights(data.highlights || []);
+    }
     setDetecting(false);
   }
 
@@ -56,22 +75,35 @@ export default function Home() {
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
+          <div className="flex justify-between items-center mt-2">
+            <span className={`text-xs ${isOverLimit ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+              {charCount} / {FREE_LIMIT} 字 {isOverLimit && '(超出限制)'}
+            </span>
+            {isOverLimit && (
+              <span className="text-xs text-purple-600">💎 升级付费版解锁更多字数</span>
+            )}
+          </div>
           <div className="flex gap-3 mt-4">
             <button
               onClick={detect}
-              disabled={detecting || !text.trim()}
+              disabled={detecting || !text.trim() || isOverLimit}
               className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium py-2.5 rounded-xl transition"
             >
               {detecting ? "Detecting..." : "🔍 Detect AI"}
             </button>
             <button
               onClick={humanize}
-              disabled={humanizing || !text.trim()}
+              disabled={humanizing || !text.trim() || isOverLimit}
               className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-medium py-2.5 rounded-xl transition"
             >
               {humanizing ? "Rewriting..." : "✨ Humanize"}
             </button>
           </div>
+          {error && (
+            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
+              {error}
+            </div>
+          )}
         </div>
 
         {score !== null && (
@@ -88,6 +120,20 @@ export default function Home() {
             <p className="text-xs text-gray-400 mt-2">
               {score >= 70 ? "⚠️ Likely AI-generated" : score >= 40 ? "🤔 Possibly AI-generated" : "✅ Likely human-written"}
             </p>
+            
+            {highlights.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <p className="text-xs font-medium text-gray-500 mb-2">🎯 疑似 AI 生成的句子：</p>
+                <div className="space-y-2">
+                  {highlights.map((sentence, idx) => (
+                    <div key={idx} className="text-sm bg-yellow-50 border-l-2 border-yellow-400 p-2 rounded">
+                      {sentence}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400 mt-2">💎 升级付费版查看更详细的分析</p>
+              </div>
+            )}
           </div>
         )}
 
