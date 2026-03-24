@@ -21,10 +21,10 @@ function analyzeTextFeatures(text: string) {
   const aiSignals = [
     /值得注意的是|需要强调的是|不可忽视的是/,
     /综上所述|总而言之|由此可见/,
-    /首先.*其次.*最后/s,
-    /一方面.*另一方面/s,
-    /不仅.*而且.*还/s,
-    /通过.*可以.*从而/s,
+    /首先[\s\S]*其次[\s\S]*最后/,
+    /一方面[\s\S]*另一方面/,
+    /不仅[\s\S]*而且[\s\S]*还/,
+    /通过[\s\S]*可以[\s\S]*从而/,
   ];
 
   const humanScore = humanSignals.filter(r => r.test(text)).length;
